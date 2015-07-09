@@ -1,0 +1,31 @@
+#usrName h1{
+    margin:10px 0;
+}
+#usr{
+    border:none;
+    border-bottom:1px solid black;
+}
+
+h1{
+    height: 10%;
+    font-size: 40px;
+    text-align: center;
+}
+#chatLog{
+    height: 80%;
+    overflow-y: scroll;
+}
+#box{
+    height: 10%;
+}
+#content,#chatBox,#chatBox input,#chatBox button{
+    height: 100%;
+}
+input{
+    border: 2px solid black;
+}
+.name{
+    color: darkblue;
+    padding: 0 10px;
+    font-size: 1.2em;
+}

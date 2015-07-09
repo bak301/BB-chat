@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Socket Chat</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css">
+    <link rel="stylesheet" href="css/reset.css"/>
+    <link rel="stylesheet" href="css/main.css"/>
+</head>
+<body>
+    <form action="" id="usrName" class="container">
+        <h1>What's your name?</h1>
+        <input id="usr" class="col-xs-8 col-xs-offset-2 col-sm-4 col-sm-offset-4"/><button style="display:none"></button>
+    </form>
+    <div id="content" class="container">
+        <h1>Socket Chat</h1>
+        <div id="chatLog" class="row">
+            <ul id="messages"></ul>
+        </div>
+        <div id="box">
+            <form id="chatBox" class="row" action="">
+                <input id="m" autocomplete="off" class="col-xs-12" /><button style="display:none"></button>
+            </form>
+        </div>
+    </div>
+    <script src="https://cdn.socket.io/socket.io-1.2.0.js"></script>
+    <script src="http://code.jquery.com/jquery-1.11.3.js"></script>
+    <script>
+        $(document).ready(function(){
+            $('#content').hide()
+            var h = $(window).height();
+            $('body').css('height',h);
+        })
+
+        var socket = io();
+        $('#chatBox').submit(function(){
+            socket.emit('new mess',$('#m').val());
+            $('#m').val('');
+            return false;
+        });
+
+        $('#usrName').submit(function(){
+            socket.emit('add user',$('#usr').val().trim())
+            $('#usrName').hide()
+            $('#content').show()
+            return false;
+        })
+
+        socket.on('new mess', function(msg){
+            $('#messages').append("<li>"+msg+"</li>")
+        });
+    </script>
+</body>
+</html>
