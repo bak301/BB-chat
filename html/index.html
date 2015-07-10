@@ -35,7 +35,7 @@
 
         var socket = io();
         $('#chatBox').submit(function(){
-            socket.emit('new mess',$('#m').val());
+            socket.emit('new mess',$('#m').val().trim());
             $('#m').val('');
             return false;
         });
@@ -47,6 +47,9 @@
             return false;
         })
 
+        socket.on('failed database',function(er){
+            alert(er)
+        })
         socket.on('new mess', function(msg){
             $('#messages').append("<li>"+msg+"</li>")
         });
