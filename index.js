@@ -27,49 +27,19 @@ io.on('connection', function (socket) { // When client establish a connection
             console.log('Connect to chat database !')
             eventHandle(true,db) // Standard event handler
         }
-        // ---------------------------DEFINE FUNCTION
-        db.addConversation = function (name,mess){
-            db.collection('log').insertOne({
-                from: name,
-                time: getDateTime(),
-                content: mess
-            })
-        }
-
-        db.addUser = function (id,name){
-            db.collection('user').insertOne({
-                usrName: name,
-                isOnline: true,
-                usrId: id,
-                lastTimeConnect: getDateTime()
-            })
-        }
-
-        db.setOffline = function (id){
-            db.collection('user').findOneAndUpdate({usrId:id},{$set:{isOnline:false}},function(er,data){
-                if (er) console.log("Can't find !")
-                else if (data.usrName) console.log('User '+data.usrName+' has disconnected !')
-                else console.log('Anonymous has disconnected')
-                Online--;
-                if (Online == 0){
-                    console.log('database closed due to no one connect !')
-                    db.close() // Close database connection when no one come :(
-                }
-            })
-        }
     })
 
     // -------------------------------DEFINE FUNCTION
-    function eventHandle(connectStatus,db){
+    function eventHandle(dbStatus,db){
         socket.on('disconnect', function () {
             console.log('An user disconnected!: ' + socket.id)
-            isDBconnected(connectStatus,function(){
+            isDBconnected(dbStatus,function(){
                 db.setOffline(socket.id)
             })
         })
 
         socket.on('add user', function (name) {// When someone register his/her name
-            isDBconnected(connectStatus,function(){
+            isDBconnected(dbStatus,function(){
                 db.addUser(socket.id, name)
             })
             userList[usrNumber] = {
@@ -80,20 +50,84 @@ io.on('connection', function (socket) { // When client establish a connection
             console.log("new user: " + name)
         })
 
+        socket.on('typing',function(){// When someone is typing
+            socket.broadcast.emit('typing',getUserName(socket.id))
+        })
+
+        socket.on('stop typing',function(){
+            console.log('User '+getUserName(socket.id)+'stop typing')
+            io.emit('stop typing',getUserName(socket.id))
+        })
+
         socket.on('new mess', function (mess) { // When a new message sent
-            for (var i in userList) { // Check the user list to find out who send the message
-                if (userList[i].usrId && userList[i].usrId == socket.id) {
-                    var name = userList[i].usrName
-                    console.log('New mess from ' + name + ': ' + mess)
+            var name = getUserName(socket.id)
+            isDBconnected(dbStatus,function(){
+                db.addConversation(name, mess)
+                db.returnEmoticons(mess,function(data){
                     io.emit('new mess',{
                         user:name,
-                        content:mess
+                        content:mess,
+                        emo: data
                     })// Send to the client that message with sender
+                })
+            },function(){
+                io.emit('new mess',{
+                    user:name,
+                    content:mess
+                })// Send to the client that message with sender
+            })// Add conversation to chat log
+        })
 
-                    isDBconnected(connectStatus,function(){
-                        db.addConversation(name, mess)
-                    })// Add conversation to chat log
+        // DEFINE FUNCTION FOR DATABASE INTERACTION
+        function getUserName(id){
+            for (var i in userList){
+                if (userList[i].usrId && userList[i].usrId == id){
+                    return userList[i].usrName
                 }
+            }
+        }
+
+        isDBconnected(dbStatus,function(){
+            db.returnEmoticons = function(mess,cb){
+                db.collection('emo').find({}).toArray(function(er,docs){
+                    var emoObj = {}
+                    for (var i in docs){
+                        if(mess.indexOf(docs[i].shortcut) !== -1){
+                            emoObj[docs[i].shortcut] = docs[i].src
+                        }
+                    }
+                    cb(emoObj)
+                })
+            }
+
+            db.addConversation = function (name,mess){
+                db.collection('log').insertOne({
+                    from: name,
+                    time: getDateTime(),
+                    content: mess
+                })
+            }
+
+            db.addUser = function (id,name){
+                db.collection('user').insertOne({
+                    usrName: name,
+                    isOnline: true,
+                    usrId: id,
+                    lastTimeConnect: getDateTime()
+                })
+            }
+
+            db.setOffline = function (id){
+                db.collection('user').findOneAndUpdate({usrId:id},{$set:{isOnline:false}},function(er,data){
+                    if (er) console.log("Can't find !")
+                    else if (data.usrName) console.log('User '+data.usrName+' has disconnected !')
+                    else console.log('Anonymous has disconnected')
+                    Online--;
+                    if (Online == 0){
+                        console.log('database closed due to no one connect !')
+                        db.close() // Close database connection when no one come :(
+                    }
+                })
             }
         })
     }
@@ -121,8 +155,10 @@ function getDateTime() {
     return dateTime;
 }
 
-function isDBconnected (state,cb){
+function isDBconnected (state,cb,cb2){
     if (state == true){
         cb()
+    } else {
+        cb2()
     }
 }

@@ -8,7 +8,6 @@
     border:none;
     border-bottom:1px solid black;
 }
-
 h1{
     height: 10%;
     font-size: 40px;
@@ -31,4 +30,7 @@ input{
     color: darkblue;
     padding: 0 10px;
     font-size: 1.2em;
+}
+.typing{
+    font-size: 0.85em
 }
