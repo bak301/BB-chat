@@ -26,6 +26,7 @@
     </div>
     <script src="https://cdn.socket.io/socket.io-1.2.0.js"></script>
     <script src="http://code.jquery.com/jquery-1.11.3.js"></script>
+    <script src="http://code.jquery.com/jquery-migrate-1.2.1.min.js"></script>
     <script>
         $(document).ready(function(){
             $('#content').hide()
@@ -43,7 +44,7 @@
         $('#usrName').submit(function(){
             socket.emit('add user',$('#usr').val().trim())
             $('#usrName').hide()
-            $('#content').show()
+            $('#content').fadeIn('slow')
             return false;
         })
 
@@ -51,7 +52,9 @@
             alert(er)
         })
         socket.on('new mess', function(msg){
-            $('#messages').append("<li>"+msg+"</li>")
+            console.log('yolo'+msg.content)
+            $('#messages').append("<li><span class='name'>"+msg.user+"</span><span class='nextMess'></span>"+"</li>")
+            $('.nextMess').text(msg.content).removeClass('nextMess')
         });
     </script>
 </body>

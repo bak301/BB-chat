@@ -19,29 +19,59 @@ io.on('connection', function (socket) { // When client establish a connection
     console.log('An user connected!: ' + socket.id)
     console.log('Number of user online: '+Online)
     database.connect(chatDB,function(er,db){
-        if (er){ // Start handling event
-            console.log("error: "+er)
+        if (er){ // Error when connect to database
+            console.log("error: "+ er)
             io.emit('failed database','Failed to connect to database. You can keep chatting but no chat log will be recorded.')
-            socket.event(false)
+            eventHandle(false)
         } else {
-            socket.event(true,db)
+            console.log('Connect to chat database !')
+            eventHandle(true,db) // Standard event handler
+        }
+        // ---------------------------DEFINE FUNCTION
+        db.addConversation = function (name,mess){
+            db.collection('log').insertOne({
+                from: name,
+                time: getDateTime(),
+                content: mess
+            })
         }
 
-        if (Online == 0){
-            db.close()
+        db.addUser = function (id,name){
+            db.collection('user').insertOne({
+                usrName: name,
+                isOnline: true,
+                usrId: id,
+                lastTimeConnect: getDateTime()
+            })
+        }
+
+        db.setOffline = function (id){
+            db.collection('user').findOneAndUpdate({usrId:id},{$set:{isOnline:false}},function(er,data){
+                if (er) console.log("Can't find !")
+                else if (data.usrName) console.log('User '+data.usrName+' has disconnected !')
+                else console.log('Anonymous has disconnected')
+                Online--;
+                if (Online == 0){
+                    console.log('database closed due to no one connect !')
+                    db.close() // Close database connection when no one come :(
+                }
+            })
         }
     })
+
     // -------------------------------DEFINE FUNCTION
-    socket.event = function(isDBconnected,db){
+    function eventHandle(connectStatus,db){
         socket.on('disconnect', function () {
             console.log('An user disconnected!: ' + socket.id)
-            console.log('Number of user online: '+Online)
-            db.collection('user').findOneAndUpdate({usrId:socket.id},{$set:{isOnline:false}})
-            Online--
+            isDBconnected(connectStatus,function(){
+                db.setOffline(socket.id)
+            })
         })
 
         socket.on('add user', function (name) {// When someone register his/her name
-            db.addUser(isDBconnected,socket.id, name,db)
+            isDBconnected(connectStatus,function(){
+                db.addUser(socket.id, name)
+            })
             userList[usrNumber] = {
                 "usrId": socket.id,
                 "usrName": name
@@ -55,8 +85,14 @@ io.on('connection', function (socket) { // When client establish a connection
                 if (userList[i].usrId && userList[i].usrId == socket.id) {
                     var name = userList[i].usrName
                     console.log('New mess from ' + name + ': ' + mess)
-                    io.emit('new mess', '<span class="name">' + name + '</span>' + ": " + mess)// Send to the client that message with sender
-                    db.addConversation(isDBconnected,name, mess,db)// Add conversation to chat log
+                    io.emit('new mess',{
+                        user:name,
+                        content:mess
+                    })// Send to the client that message with sender
+
+                    isDBconnected(connectStatus,function(){
+                        db.addConversation(name, mess)
+                    })// Add conversation to chat log
                 }
             }
         })
@@ -67,7 +103,7 @@ server.listen(3001, function () {
     console.log('Listen on port 3001!')
 })
 
-// -----------------------------------------DEFINE FUNCTION
+// -----------------------------------------DEFINE GLOBAL FUNCTION
 function getDateTime() {
     var now     = new Date();
     var year    = now.getFullYear();
@@ -85,25 +121,8 @@ function getDateTime() {
     return dateTime;
 }
 
-database.addConversation = function (code,name,mess,db){
-    if (code == true){
-        var log = db.collection('log')
-        log.insertOne({
-            from:name,
-            time: getDateTime(),
-            content: mess
-        })
-    }
-}
-
-database.addUser = function (code,id,name,db){
-    if (code == true){
-        var usrList = db.collection('user')
-        usrList.insertOne({
-            "usrName": name,
-            "isOnline":true,
-            "usrId":id,
-            "lastTimeConnect": getDateTime()
-        })
+function isDBconnected (state,cb){
+    if (state == true){
+        cb()
     }
 }
