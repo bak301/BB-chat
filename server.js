@@ -153,6 +153,6 @@ database.connect(chatDB,function(er,db){
 });
 
 // Server start listening
-server.listen(3001, function () {
-    console.log('Listen on port 3001!')
+server.listen(process.env.PORT||3001,'http://bb-chat.herokuapp.com', function () {
+    console.log('Listen on port 80!')
 });
